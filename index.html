@@ -33,6 +33,9 @@
             align-items: center;
             overflow: hidden;
             color: var(--text-main);
+            /* Evita seleção acidental de texto no celular */
+            user-select: none; 
+            -webkit-user-select: none;
         }
 
         .window {
@@ -126,6 +129,8 @@
             width: 100%;
             padding: 4px;
             border: 1px solid #7f9db9;
+            user-select: text; /* Permite digitar */
+            -webkit-user-select: text;
         }
         .checkbox-group {
             width: 100%;
@@ -158,7 +163,7 @@
             border: 1px solid transparent;
             background: transparent;
         }
-        .phrase-input { color: #555; font-style: italic; }
+        .phrase-input { color: #555; font-style: italic; user-select: text; -webkit-user-select: text;}
         .phrase-input:focus { border: 1px solid #7f9db9; background: white; }
 
         .profile-actions {
@@ -186,11 +191,12 @@
         }
         .friends-ul { list-style: none; }
         .friends-ul li {
-            padding: 5px;
+            padding: 8px 5px; /* Aumentado para cliques mobile fáceis */
             display: flex;
             align-items: center;
             cursor: pointer;
             justify-content: space-between;
+            -webkit-tap-highlight-color: transparent;
         }
         .friends-ul li:hover { background: var(--hover-bg); }
         .friend-info {
@@ -214,10 +220,9 @@
             color: #cc0000;
             font-weight: bold;
             cursor: pointer;
-            padding: 0 6px;
+            padding: 5px 10px;
             font-size: 14px;
         }
-        .btn-remove-friend:hover { background: #ffd0d0; }
 
         /* Chat */
         .chat-info {
@@ -227,6 +232,7 @@
         .chat-avatar { width: 40px; height: 40px; margin-right: 10px; object-fit: cover; }
         .chat-messages {
             flex-grow: 1; background: white; padding: 10px; overflow-y: auto;
+            user-select: text; -webkit-user-select: text; /* Permite ler msgs */
         }
         .msg-timestamp { color: #999; font-size: 10px; margin-left: 5px; }
         .msg-autor { font-weight: bold; color: #000080; }
@@ -237,6 +243,7 @@
         }
         .chat-input {
             flex-grow: 1; resize: none; height: 50px; font-family: Tahoma; border: 1px solid #7f9db9; padding: 4px;
+            user-select: text; -webkit-user-select: text;
         }
         .btn-send { margin-left: 5px; height: 50px; }
 
@@ -403,9 +410,6 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, writeBatch, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ============================================================
-        //  SUA NOVA CONFIGURAÇÃO DO FIREBASE (mns-feba4)
-        // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCEUUrSWFDIIWrhkFjSRAZZGFb0StiTjik",
             authDomain: "mns-feba4.firebaseapp.com",
@@ -419,9 +423,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // ============================================================
-        //  REFERÊNCIAS DO DOM
-        // ============================================================
         const loginScreen = document.getElementById('login-screen');
         const mainScreen = document.getElementById('main-screen');
         const loginForm = document.getElementById('login-form');
@@ -437,11 +438,8 @@
         let currentUserData = null;
         let lastMessageTime = 0;
         const MESSAGE_COOLDOWN = 3000;
-        const MAX_IMAGE_SIZE = 600000; // 600 KB
+        const MAX_IMAGE_SIZE = 600000; 
 
-        // ============================================================
-        //  ÁUDIO
-        // ============================================================
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playMsnSound(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -469,9 +467,6 @@
             }
         }
 
-        // ============================================================
-        //  AUTENTICAÇÃO
-        // ============================================================
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -511,9 +506,6 @@
             }
         });
 
-        // ============================================================
-        //  PERFIL DO USUÁRIO (E-MAIL PREENCHIDO PARA BUSCA)
-        // ============================================================
         async function loadUserProfile(uid) {
             const userRef = doc(db, 'usuarios', uid);
             let userSnap = await getDoc(userRef);
@@ -567,7 +559,6 @@
             });
         }
 
-        // Upload de foto
         avatarContainer.addEventListener('click', () => uploadAvatarInput.click());
 
         uploadAvatarInput.addEventListener('change', async (e) => {
@@ -575,7 +566,7 @@
             if (!file) return;
 
             if (file.size > MAX_IMAGE_SIZE) {
-                alert(`A imagem é muito grande (máx. ${MAX_IMAGE_SIZE/1000} KB). Escolha uma foto menor.`);
+                alert(`A imagem é muito grande. Escolha uma foto menor.`);
                 return;
             }
 
@@ -596,9 +587,6 @@
             reader.readAsDataURL(file);
         });
 
-        // ============================================================
-        //  ADICIONAR / REMOVER AMIGOS
-        // ============================================================
         btnAddFriend.addEventListener('click', async () => {
             const email = prompt('Digite o e-mail do amigo que deseja adicionar:');
             if (!email) return;
@@ -607,11 +595,9 @@
                 const q = query(collection(db, 'usuarios'));
                 const snapshot = await getDocs(q);
                 let targetUid = null;
-                let targetData = null;
                 snapshot.forEach(doc => {
                     if (doc.data().email === email) { 
                         targetUid = doc.id;
-                        targetData = doc.data();
                     }
                 });
 
@@ -644,9 +630,6 @@
             }
         });
 
-        // ============================================================
-        //  LISTA DE AMIGOS (FILTRADA)
-        // ============================================================
         function listenToFriends(uid) {
             const q = query(collection(db, "usuarios"));
             onSnapshot(q, (snapshot) => {
@@ -664,8 +647,6 @@
                         friend.status === 'ausente' ? 'ausente' :
                         friend.status === 'ocupado' ? 'ocupado' : 'invisivel';
 
-                    const isOffline = (friend.status === 'offline' || friend.status === 'invisivel');
-
                     li.innerHTML = `
                         <div class="friend-info">
                             <div class="status-dot ${statusColor}"></div>
@@ -674,12 +655,13 @@
                         <button class="btn-remove-friend" data-uid="${docSnap.id}" title="Remover amigo">✕</button>
                     `;
 
-                    li.addEventListener('dblclick', () => openChatWindow(docSnap.id, friend));
+                    // Suporta clique normal para abrir chat mobile sem complicação
+                    li.addEventListener('click', () => openChatWindow(docSnap.id, friend));
 
                     const btnRemove = li.querySelector('.btn-remove-friend');
                     btnRemove.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        if (confirm(`Deseja remover ${friend.nome} da sua lista de amigos?`)) {
+                        e.stopPropagation(); // Impede abrir o chat ao remover
+                        if (confirm(`Deseja remover ${friend.nome}?`)) {
                             try {
                                 const userRef = doc(db, 'usuarios', uid);
                                 const targetRef = doc(db, 'usuarios', docSnap.id);
@@ -696,9 +678,6 @@
             });
         }
 
-        // ============================================================
-        //  JANELA DE CHAT
-        // ============================================================
         function openChatWindow(friendId, friendData) {
             const container = document.getElementById('chat-container');
             const chatId = `chat_${friendId}`;
@@ -722,7 +701,9 @@
 
             const messagesArea = chatDiv.querySelector('.chat-messages');
             const inputField = chatDiv.querySelector('.chat-input');
-            const btnSend = document.querySelector('.btn-send');
+            
+            // CORREÇÃO: Busca o botão específico desta janela de chat aberta
+            const btnSend = chatDiv.querySelector('.btn-send'); 
             const btnNudge = chatDiv.querySelector('.btn-nudge');
             const btnClear = chatDiv.querySelector('.btn-clear');
 
@@ -745,7 +726,7 @@
                             chatDiv.classList.add('tremida');
                             playMsnSound('nudge');
                             setTimeout(() => chatDiv.classList.remove('tremida'), 800);
-                            messagesArea.innerHTML += `<div class="system-msg">Você acabou de enviar uma chamar a atenção!</div>`;
+                            messagesArea.innerHTML += `<div class="system-msg">Você acabou de chamar a atenção!</div>`;
                         } else {
                             const isMe = msg.autor === auth.currentUser.uid;
                             const nome = isMe ? currentUserData.nome : friendData.nome;
@@ -796,7 +777,7 @@
             btnNudge.addEventListener('click', () => sendMessage('/nudge'));
 
             btnClear.addEventListener('click', async () => {
-                if(confirm("Deseja realmente apagar todo o histórico dessa conversa? (Será apagado para os dois)")) {
+                if(confirm("Deseja realmente apagar todo o histórico dessa conversa?")) {
                     try {
                         const qDel = query(collection(db, `conversas/${conversationId}/mensagens`));
                         const snap = await getDocs(qDel);
@@ -804,7 +785,7 @@
                         snap.forEach(d => batch.delete(d.ref));
                         await batch.commit(); 
                     } catch (err) {
-                        alert("Erro ao apagar conversa. Verifique as permissões do Firebase.");
+                        alert("Erro ao apagar conversa.");
                         console.error(err);
                     }
                 }
