@@ -403,13 +403,16 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, writeBatch, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // ============================================================
+        //  SUA NOVA CONFIGURAÇÃO DO FIREBASE (mns-feba4)
+        // ============================================================
         const firebaseConfig = {
-            apiKey: "AIzaSyAyJ6KJTD3j31uMPQm-0VkXPrq0EE3pBCs",
-            authDomain: "mns-9e383.firebaseapp.com",
-            projectId: "mns-9e383",
-            storageBucket: "mns-9e383.firebasestorage.app",
-            messagingSenderId: "241992136978",
-            appId: "1:241992136978:web:8b70e3dc4179012b2e5bcb"
+            apiKey: "AIzaSyCEUUrSWFDIIWrhkFjSRAZZGFb0StiTjik",
+            authDomain: "mns-feba4.firebaseapp.com",
+            projectId: "mns-feba4",
+            storageBucket: "mns-feba4.firebasestorage.app",
+            messagingSenderId: "305256602600",
+            appId: "1:305256602600:web:0704376f3612536feca25d"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -509,7 +512,7 @@
         });
 
         // ============================================================
-        //  PERFIL DO USUÁRIO (INTEGRADO COM CORREÇÃO DE E-MAIL)
+        //  PERFIL DO USUÁRIO (E-MAIL PREENCHIDO PARA BUSCA)
         // ============================================================
         async function loadUserProfile(uid) {
             const userRef = doc(db, 'usuarios', uid);
@@ -518,7 +521,7 @@
             if (!userSnap.exists()) {
                 await setDoc(userRef, {
                     nome: auth.currentUser.email.split('@')[0],
-                    email: auth.currentUser.email, // Salva o e-mail real no primeiro acesso
+                    email: auth.currentUser.email, 
                     apelido: '',
                     foto: document.getElementById('my-avatar').src,
                     frase: 'Jogando...',
@@ -532,7 +535,6 @@
 
             currentUserData = userSnap.data();
             
-            // Força a existência do campo e-mail caso o usuário tenha sido criado no código antigo
             if (!currentUserData.email) {
                 await updateDoc(userRef, { email: auth.currentUser.email });
                 currentUserData.email = auth.currentUser.email;
@@ -602,7 +604,6 @@
             if (!email) return;
 
             try {
-                // Buscar usuário pelo e-mail
                 const q = query(collection(db, 'usuarios'));
                 const snapshot = await getDocs(q);
                 let targetUid = null;
@@ -627,7 +628,6 @@
                 const userRef = doc(db, 'usuarios', auth.currentUser.uid);
                 const targetRef = doc(db, 'usuarios', targetUid);
 
-                // Verificar se já é amigo
                 const userSnap = await getDoc(userRef);
                 const amigos = userSnap.data().amigos || [];
                 if (amigos.includes(targetUid)) {
@@ -635,7 +635,6 @@
                     return;
                 }
 
-                // Adicionar bilateralmente
                 await updateDoc(userRef, { amigos: arrayUnion(targetUid) });
                 await updateDoc(targetRef, { amigos: arrayUnion(auth.currentUser.uid) });
 
@@ -656,7 +655,7 @@
 
                 snapshot.forEach((docSnap) => {
                     if (docSnap.id === uid) return;
-                    if (!friendsUids.includes(docSnap.id)) return; // Só mostra amigos
+                    if (!friendsUids.includes(docSnap.id)) return; 
 
                     const friend = docSnap.data();
                     const li = document.createElement('li');
@@ -677,7 +676,6 @@
 
                     li.addEventListener('dblclick', () => openChatWindow(docSnap.id, friend));
 
-                    // Remover amigo
                     const btnRemove = li.querySelector('.btn-remove-friend');
                     btnRemove.addEventListener('click', async (e) => {
                         e.stopPropagation();
@@ -724,7 +722,7 @@
 
             const messagesArea = chatDiv.querySelector('.chat-messages');
             const inputField = chatDiv.querySelector('.chat-input');
-            const btnSend = chatDiv.querySelector('.btn-send');
+            const btnSend = document.querySelector('.btn-send');
             const btnNudge = chatDiv.querySelector('.btn-nudge');
             const btnClear = chatDiv.querySelector('.btn-clear');
 
