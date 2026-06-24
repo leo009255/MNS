@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MNS - Mensagens, Nostalgia & Saudade</title>
+
+    <style>
+        /* ===== CSS EMBUTIDO - ESTILO AERO GLASS ===== */
+        :root {
+            --bg-color: #dbe8f4;
+            --window-border: #8ab1cc;
+            --title-gradient-start: rgba(255, 255, 255, 0.9);
+            --title-gradient-end: rgba(186, 212, 235, 0.85);
+            --text-main: #333333;
+            --list-bg: #f8fbff;
+            --hover-bg: #dcecf9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background: radial-gradient(circle, #e2eff9 0%, #b5d3ee 100%);
+            font-size: 13px;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        .window {
+            background: var(--bg-color);
+            border: 1px solid var(--window-border);
+            border-radius: 6px 6px 0 0;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        @media (min-width: 768px) {
+            .window {
+                width: 320px;
+                height: 600px;
+                position: relative;
+                margin: 20px;
+            }
+            .chat-window {
+                position: absolute;
+                width: 400px;
+                height: 500px;
+            }
+        }
+
+        .hidden { display: none !important; }
+        .active { display: flex !important; }
+
+        .window-header {
+            background: linear-gradient(to bottom, var(--title-gradient-start), var(--title-gradient-end));
+            color: #000;
+            padding: 4px 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px 5px 0 0;
+            cursor: default;
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--window-border);
+        }
+
+        .window-controls button {
+            background: transparent;
+            border: 1px solid #666;
+            color: #000;
+            border-radius: 3px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .window-controls .btn-close:hover { background: #ff4d4d; color: white; border-color: #ff4d4d; }
+
+        .xp-button {
+            background: linear-gradient(to bottom, #f2f2f2, #d4d0c8);
+            border: 1px solid #7a7a7a;
+            border-radius: 3px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-family: Tahoma;
+            font-size: 12px;
+        }
+        .xp-button:active {
+            background: #c0c0c0;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* Login */
+        .login-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            justify-content: center;
+        }
+        .logo { width: 80px; margin-bottom: 10px; }
+        .input-group {
+            width: 100%;
+            text-align: left;
+            margin-bottom: 10px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #7f9db9;
+        }
+        .checkbox-group {
+            width: 100%;
+            text-align: left;
+            margin: 6px 0 12px;
+        }
+
+        /* Perfil */
+        .profile-area {
+            display: flex;
+            padding: 10px;
+            background: linear-gradient(to bottom, #ffffff, #e6f0fa);
+            border-bottom: 1px solid #b2c9df;
+            flex-shrink: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #a0a0a0;
+            margin-right: 10px;
+            object-fit: cover;
+        }
+        .profile-info { flex-grow: 1; }
+        .status-select, .phrase-input {
+            width: 100%;
+            margin-top: 4px;
+            font-size: 11px;
+            border: 1px solid transparent;
+            background: transparent;
+        }
+        .phrase-input { color: #555; font-style: italic; }
+        .phrase-input:focus { border: 1px solid #7f9db9; background: white; }
+
+        .profile-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            width: 100%;
+        }
+
+        /* Lista de amigos */
+        .friends-list-container {
+            flex-grow: 1;
+            background: var(--list-bg);
+            overflow-y: auto;
+            border: 1px solid #a0a0a0;
+            margin: 5px;
+        }
+        .group-title {
+            padding: 2px 5px;
+            font-weight: bold;
+            color: #003399;
+            border-bottom: 1px solid #d9e6f2;
+            display: flex;
+            justify-content: space-between;
+        }
+        .friends-ul { list-style: none; }
+        .friends-ul li {
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            justify-content: space-between;
+        }
+        .friends-ul li:hover { background: var(--hover-bg); }
+        .friend-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%; margin-right: 8px;
+            flex-shrink: 0;
+        }
+        .online { background: #00ff00; }
+        .ausente { background: #ffcc00; }
+        .ocupado { background: #ff0000; }
+        .invisivel { background: #888888; }
+        .offline { background: #aaaaaa; }
+
+        .btn-remove-friend {
+            background: transparent;
+            border: none;
+            color: #cc0000;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 6px;
+            font-size: 14px;
+        }
+        .btn-remove-friend:hover { background: #ffd0d0; }
+
+        /* Chat */
+        .chat-info {
+            display: flex; padding: 10px; background: white; border-bottom: 1px solid #ccc;
+            flex-shrink: 0;
+        }
+        .chat-avatar { width: 40px; height: 40px; margin-right: 10px; object-fit: cover; }
+        .chat-messages {
+            flex-grow: 1; background: white; padding: 10px; overflow-y: auto;
+        }
+        .msg-timestamp { color: #999; font-size: 10px; margin-left: 5px; }
+        .msg-autor { font-weight: bold; color: #000080; }
+        .system-msg { color: #666; font-style: italic; font-size: 11px; text-align: center; margin: 4px 0; }
+        .chat-toolbar { padding: 5px; background: #e6f0fa; border-top: 1px solid #ccc; flex-shrink: 0; display: flex; gap: 5px; }
+        .chat-input-area {
+            display: flex; padding: 5px; background: #e6f0fa; flex-shrink: 0;
+        }
+        .chat-input {
+            flex-grow: 1; resize: none; height: 50px; font-family: Tahoma; border: 1px solid #7f9db9; padding: 4px;
+        }
+        .btn-send { margin-left: 5px; height: 50px; }
+
+        /* Nudge shake */
+        @keyframes shake {
+            0% { transform: translate(3px, 2px) rotate(0deg); }
+            10% { transform: translate(-3px, -2px) rotate(-1deg); }
+            20% { transform: translate(-4px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(2px, -2px) rotate(1deg); }
+            50% { transform: translate(-3px, 2px) rotate(-1deg); }
+            60% { transform: translate(-4px, 2px) rotate(0deg); }
+            70% { transform: translate(3px, 2px) rotate(-1deg); }
+            80% { transform: translate(-2px, -2px) rotate(1deg); }
+            90% { transform: translate(3px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .tremida {
+            animation: shake 0.1s;
+            animation-iteration-count: 8;
+        }
+
+        /* Chat flutuante */
+        #chat-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #chat-container .chat-window {
+            pointer-events: all;
+            width: 380px;
+            height: 480px;
+            position: absolute;
+            background: var(--bg-color);
+            border: 1px solid var(--window-border);
+            border-radius: 6px 6px 0 0;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        @media (max-width: 767px) {
+            #chat-container .chat-window {
+                width: 100%;
+                height: 100%;
+                top: 0 !important;
+                left: 0 !important;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen" class="window active">
+        <div class="window-header">
+            <span>MNS Messenger</span>
+            <div class="window-controls">
+                <button class="btn-min">_</button>
+                <button class="btn-close">X</button>
+            </div>
+        </div>
+        <div class="window-content login-content">
+            <img src="logo.png" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/1/11/MSN_Messenger_Logo.png'" alt="MNS Logo" class="logo" />
+            <h2>Bem-vindo ao MNS</h2>
+            <p class="subtitle">Mensagens, Nostalgia & Saudade</p>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">Endereço de e-mail:</label>
+                    <input type="email" id="email" required />
+                </div>
+                <div class="input-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" required />
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="remember" />
+                    <label for="remember">Lembrar meu login</label>
+                </div>
+                <div class="actions">
+                    <button type="submit" class="xp-button">Entrar</button>
+                    <button type="button" id="btn-register" class="xp-button">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-screen" class="window hidden">
+        <div class="window-header">
+            <span>MNS Messenger</span>
+            <div class="window-controls">
+                <button class="btn-min">_</button>
+                <button class="btn-close" id="btn-logout">X</button>
+            </div>
+        </div>
+
+        <div class="profile-area">
+            <div id="avatar-container" style="position: relative; cursor: pointer;" title="Clique para alterar a foto">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Ccircle cx='25' cy='25' r='24' fill='%23cccccc'/%3E%3Ccircle cx='25' cy='18' r='8' fill='%23999999'/%3E%3Cpath d='M10 38 Q25 30 40 38' stroke='%23999999' stroke-width='4' fill='none'/%3E%3C/svg%3E" alt="Avatar" class="avatar" id="my-avatar" />
+                <input type="file" id="upload-avatar" accept="image/png, image/jpeg, image/gif" style="display: none;" />
+            </div>
+
+            <div class="profile-info">
+                <strong id="my-name">Carregando...</strong>
+                <select id="my-status" class="status-select">
+                    <option value="online">🟢 Online</option>
+                    <option value="ausente">🌙 Ausente</option>
+                    <option value="ocupado">🔴 Ocupado</option>
+                    <option value="invisivel">⚫ Invisível</option>
+                    <option value="offline">⏹ Offline</option>
+                </select>
+                <input type="text" id="my-phrase" placeholder="Digite uma mensagem pessoal..." class="phrase-input" />
+            </div>
+
+            <div class="profile-actions">
+                <button id="btn-add-friend" class="xp-button">➕ Adicionar Amigo</button>
+            </div>
+        </div>
+
+        <div class="friends-list-container">
+            <div class="friends-group">
+                <div class="group-title">Meus Amigos</div>
+                <ul id="friends-list" class="friends-ul"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-container"></div>
+
+    <template id="chat-template">
+        <div class="window chat-window">
+            <div class="window-header">
+                <span class="chat-title">Nome do Contato</span>
+                <div class="window-controls">
+                    <button class="btn-close-chat">X</button>
+                </div>
+            </div>
+            <div class="chat-info">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='19' fill='%23cccccc'/%3E%3Ccircle cx='20' cy='14' r='6' fill='%23999999'/%3E%3Cpath d='M8 30 Q20 24 32 30' stroke='%23999999' stroke-width='3' fill='none'/%3E%3C/svg%3E" alt="Avatar" class="chat-avatar" />
+                <div>
+                    <strong class="chat-contact-name">Contato</strong>
+                    <p class="chat-contact-phrase" style="color:#555;font-style:italic;font-size:11px;">Frase pessoal aqui</p>
+                </div>
+            </div>
+            <div class="chat-messages"></div>
+            <div class="typing-indicator hidden">Contato está digitando...</div>
+            <div class="chat-toolbar">
+                <button class="btn-nudge xp-button">🔔 Chamar Atenção</button>
+                <button class="btn-emoji xp-button">😀</button>
+                <button class="btn-clear xp-button">🗑️ Apagar</button> 
+            </div>
+            <div class="chat-input-area">
+                <textarea class="chat-input" maxlength="200" placeholder="Digite uma mensagem..."></textarea>
+                <button class="btn-send xp-button">Enviar</button>
+            </div>
+        </div>
+    </template>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, writeBatch, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyJ6KJTD3j31uMPQm-0VkXPrq0EE3pBCs",
+            authDomain: "mns-9e383.firebaseapp.com",
+            projectId: "mns-9e383",
+            storageBucket: "mns-9e383.firebasestorage.app",
+            messagingSenderId: "241992136978",
+            appId: "1:241992136978:web:8b70e3dc4179012b2e5bcb"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // ============================================================
+        //  REFERÊNCIAS DO DOM
+        // ============================================================
+        const loginScreen = document.getElementById('login-screen');
+        const mainScreen = document.getElementById('main-screen');
+        const loginForm = document.getElementById('login-form');
+        const myNameEl = document.getElementById('my-name');
+        const myStatusEl = document.getElementById('my-status');
+        const myPhraseEl = document.getElementById('my-phrase');
+        const friendsList = document.getElementById('friends-list');
+        const btnAddFriend = document.getElementById('btn-add-friend');
+        const myAvatarImg = document.getElementById('my-avatar');
+        const uploadAvatarInput = document.getElementById('upload-avatar');
+        const avatarContainer = document.getElementById('avatar-container');
+
+        let currentUserData = null;
+        let lastMessageTime = 0;
+        const MESSAGE_COOLDOWN = 3000;
+        const MAX_IMAGE_SIZE = 600000; // 600 KB
+
+        // ============================================================
+        //  ÁUDIO
+        // ============================================================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playMsnSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'nudge') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'msg') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+
+        // ============================================================
+        //  AUTENTICAÇÃO
+        // ============================================================
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                alert("Erro no login: " + error.message);
+            }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            if (auth.currentUser) {
+                updateDoc(doc(db, 'usuarios', auth.currentUser.uid), { status: 'offline' });
+                signOut(auth);
+            }
+        });
+
+        document.getElementById('btn-register').addEventListener('click', () => {
+            alert('Registro por convite não implementado nesta POC.\nCrie um usuário diretamente no Firebase Console.');
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                loginScreen.classList.remove('active');
+                loginScreen.classList.add('hidden');
+                mainScreen.classList.remove('hidden');
+                mainScreen.classList.add('active');
+                await loadUserProfile(user.uid);
+                listenToFriends(user.uid);
+            } else {
+                mainScreen.classList.remove('active');
+                mainScreen.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                loginScreen.classList.add('active');
+                document.getElementById('chat-container').innerHTML = '';
+            }
+        });
+
+        // ============================================================
+        //  PERFIL DO USUÁRIO (INTEGRADO COM CORREÇÃO DE E-MAIL)
+        // ============================================================
+        async function loadUserProfile(uid) {
+            const userRef = doc(db, 'usuarios', uid);
+            let userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                await setDoc(userRef, {
+                    nome: auth.currentUser.email.split('@')[0],
+                    email: auth.currentUser.email, // Salva o e-mail real no primeiro acesso
+                    apelido: '',
+                    foto: document.getElementById('my-avatar').src,
+                    frase: 'Jogando...',
+                    status: 'online',
+                    tema: 'classico',
+                    amigos: [],
+                    ultimoAcesso: serverTimestamp()
+                });
+                userSnap = await getDoc(userRef);
+            }
+
+            currentUserData = userSnap.data();
+            
+            // Força a existência do campo e-mail caso o usuário tenha sido criado no código antigo
+            if (!currentUserData.email) {
+                await updateDoc(userRef, { email: auth.currentUser.email });
+                currentUserData.email = auth.currentUser.email;
+            }
+
+            if (!currentUserData.amigos) {
+                await updateDoc(userRef, { amigos: [] });
+                currentUserData.amigos = [];
+            }
+
+            myNameEl.innerText = currentUserData.nome;
+            myStatusEl.value = currentUserData.status;
+            myPhraseEl.value = currentUserData.frase;
+            if (currentUserData.foto) {
+                myAvatarImg.src = currentUserData.foto;
+            }
+
+            myStatusEl.addEventListener('change', (e) => {
+                updateDoc(userRef, { status: e.target.value });
+                currentUserData.status = e.target.value;
+            });
+
+            let debounceTimer;
+            myPhraseEl.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    updateDoc(userRef, { frase: e.target.value });
+                    currentUserData.frase = e.target.value;
+                }, 1000);
+            });
+        }
+
+        // Upload de foto
+        avatarContainer.addEventListener('click', () => uploadAvatarInput.click());
+
+        uploadAvatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > MAX_IMAGE_SIZE) {
+                alert(`A imagem é muito grande (máx. ${MAX_IMAGE_SIZE/1000} KB). Escolha uma foto menor.`);
+                return;
+            }
+
+            myAvatarImg.style.opacity = '0.5';
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                try {
+                    const base64String = reader.result;
+                    myAvatarImg.src = base64String;
+                    currentUserData.foto = base64String;
+                    await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), { foto: base64String });
+                } catch (error) {
+                    alert("Erro ao salvar a foto: " + error.message);
+                } finally {
+                    myAvatarImg.style.opacity = '1';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ============================================================
+        //  ADICIONAR / REMOVER AMIGOS
+        // ============================================================
+        btnAddFriend.addEventListener('click', async () => {
+            const email = prompt('Digite o e-mail do amigo que deseja adicionar:');
+            if (!email) return;
+
+            try {
+                // Buscar usuário pelo e-mail
+                const q = query(collection(db, 'usuarios'));
+                const snapshot = await getDocs(q);
+                let targetUid = null;
+                let targetData = null;
+                snapshot.forEach(doc => {
+                    if (doc.data().email === email) { 
+                        targetUid = doc.id;
+                        targetData = doc.data();
+                    }
+                });
+
+                if (!targetUid) {
+                    alert('Usuário não encontrado. Verifique o e-mail.');
+                    return;
+                }
+
+                if (targetUid === auth.currentUser.uid) {
+                    alert('Você não pode adicionar a si mesmo.');
+                    return;
+                }
+
+                const userRef = doc(db, 'usuarios', auth.currentUser.uid);
+                const targetRef = doc(db, 'usuarios', targetUid);
+
+                // Verificar se já é amigo
+                const userSnap = await getDoc(userRef);
+                const amigos = userSnap.data().amigos || [];
+                if (amigos.includes(targetUid)) {
+                    alert('Este usuário já é seu amigo.');
+                    return;
+                }
+
+                // Adicionar bilateralmente
+                await updateDoc(userRef, { amigos: arrayUnion(targetUid) });
+                await updateDoc(targetRef, { amigos: arrayUnion(auth.currentUser.uid) });
+
+                alert('Amigo adicionado com sucesso!');
+            } catch (error) {
+                alert('Erro ao adicionar amigo: ' + error.message);
+            }
+        });
+
+        // ============================================================
+        //  LISTA DE AMIGOS (FILTRADA)
+        // ============================================================
+        function listenToFriends(uid) {
+            const q = query(collection(db, "usuarios"));
+            onSnapshot(q, (snapshot) => {
+                friendsList.innerHTML = '';
+                const friendsUids = currentUserData?.amigos || [];
+
+                snapshot.forEach((docSnap) => {
+                    if (docSnap.id === uid) return;
+                    if (!friendsUids.includes(docSnap.id)) return; // Só mostra amigos
+
+                    const friend = docSnap.data();
+                    const li = document.createElement('li');
+                    
+                    const statusColor = friend.status === 'online' ? 'online' :
+                        friend.status === 'ausente' ? 'ausente' :
+                        friend.status === 'ocupado' ? 'ocupado' : 'invisivel';
+
+                    const isOffline = (friend.status === 'offline' || friend.status === 'invisivel');
+
+                    li.innerHTML = `
+                        <div class="friend-info">
+                            <div class="status-dot ${statusColor}"></div>
+                            <span><strong>${friend.nome}</strong> <span style="color:#777;font-style:italic;">- ${friend.frase || ''}</span></span>
+                        </div>
+                        <button class="btn-remove-friend" data-uid="${docSnap.id}" title="Remover amigo">✕</button>
+                    `;
+
+                    li.addEventListener('dblclick', () => openChatWindow(docSnap.id, friend));
+
+                    // Remover amigo
+                    const btnRemove = li.querySelector('.btn-remove-friend');
+                    btnRemove.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (confirm(`Deseja remover ${friend.nome} da sua lista de amigos?`)) {
+                            try {
+                                const userRef = doc(db, 'usuarios', uid);
+                                const targetRef = doc(db, 'usuarios', docSnap.id);
+                                await updateDoc(userRef, { amigos: arrayRemove(docSnap.id) });
+                                await updateDoc(targetRef, { amigos: arrayRemove(uid) });
+                            } catch (error) {
+                                alert('Erro ao remover amigo: ' + error.message);
+                            }
+                        }
+                    });
+
+                    friendsList.appendChild(li);
+                });
+            });
+        }
+
+        // ============================================================
+        //  JANELA DE CHAT
+        // ============================================================
+        function openChatWindow(friendId, friendData) {
+            const container = document.getElementById('chat-container');
+            const chatId = `chat_${friendId}`;
+
+            if (document.getElementById(chatId)) return;
+
+            const template = document.getElementById('chat-template').content.cloneNode(true);
+            const chatDiv = template.querySelector('.chat-window');
+            chatDiv.id = chatId;
+
+            chatDiv.style.top = Math.floor(Math.random() * 50 + 50) + 'px';
+            chatDiv.style.left = Math.floor(Math.random() * 50 + 50) + 'px';
+
+            chatDiv.querySelector('.chat-contact-name').innerText = friendData.nome;
+            chatDiv.querySelector('.chat-title').innerText = `${friendData.nome} - Conversa`;
+            chatDiv.querySelector('.chat-contact-phrase').innerText = friendData.frase || '';
+
+            if (friendData.foto) {
+                chatDiv.querySelector('.chat-avatar').src = friendData.foto;
+            }
+
+            const messagesArea = chatDiv.querySelector('.chat-messages');
+            const inputField = chatDiv.querySelector('.chat-input');
+            const btnSend = chatDiv.querySelector('.btn-send');
+            const btnNudge = chatDiv.querySelector('.btn-nudge');
+            const btnClear = chatDiv.querySelector('.btn-clear');
+
+            chatDiv.querySelector('.btn-close-chat').addEventListener('click', () => chatDiv.remove());
+
+            const conversationId = [auth.currentUser.uid, friendId].sort().join('_');
+
+            const qMsg = query(collection(db, `conversas/${conversationId}/mensagens`), orderBy("data", "asc"));
+            onSnapshot(qMsg, (snapshot) => {
+                if (snapshot.empty) {
+                    messagesArea.innerHTML = '';
+                    return;
+                }
+
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const msg = change.doc.data();
+
+                        if (msg.texto === '/nudge') {
+                            chatDiv.classList.add('tremida');
+                            playMsnSound('nudge');
+                            setTimeout(() => chatDiv.classList.remove('tremida'), 800);
+                            messagesArea.innerHTML += `<div class="system-msg">Você acabou de enviar uma chamar a atenção!</div>`;
+                        } else {
+                            const isMe = msg.autor === auth.currentUser.uid;
+                            const nome = isMe ? currentUserData.nome : friendData.nome;
+                            const time = msg.data ? new Date(msg.data.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                            messagesArea.innerHTML += `
+                                <div>
+                                    <span class="msg-autor">${nome} diz:</span>
+                                    <span class="msg-timestamp">(${time})</span>
+                                    <div style="margin-left:10px;margin-bottom:5px;">${msg.texto}</div>
+                                </div>
+                            `;
+                            if (!isMe) playMsnSound('msg');
+                        }
+                        messagesArea.scrollTop = messagesArea.scrollHeight;
+                    }
+                });
+            });
+
+            const sendMessage = async (text) => {
+                if (!text.trim()) return;
+
+                const now = Date.now();
+                if (now - lastMessageTime < MESSAGE_COOLDOWN && text !== '/nudge') {
+                    alert('Aguarde 3 segundos para enviar outra mensagem.');
+                    return;
+                }
+                lastMessageTime = now;
+
+                await addDoc(collection(db, `conversas/${conversationId}/mensagens`), {
+                    autor: auth.currentUser.uid,
+                    texto: text,
+                    data: serverTimestamp()
+                });
+
+                inputField.value = '';
+                inputField.focus();
+            };
+
+            btnSend.addEventListener('click', () => sendMessage(inputField.value));
+            inputField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(inputField.value);
+                }
+            });
+
+            btnNudge.addEventListener('click', () => sendMessage('/nudge'));
+
+            btnClear.addEventListener('click', async () => {
+                if(confirm("Deseja realmente apagar todo o histórico dessa conversa? (Será apagado para os dois)")) {
+                    try {
+                        const qDel = query(collection(db, `conversas/${conversationId}/mensagens`));
+                        const snap = await getDocs(qDel);
+                        const batch = writeBatch(db);
+                        snap.forEach(d => batch.delete(d.ref));
+                        await batch.commit(); 
+                    } catch (err) {
+                        alert("Erro ao apagar conversa. Verifique as permissões do Firebase.");
+                        console.error(err);
+                    }
+                }
+            });
+
+            container.appendChild(chatDiv);
+            inputField.focus();
+        }
+    </script>
+</body>
+</html>
