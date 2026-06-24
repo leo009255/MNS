@@ -33,7 +33,6 @@
             align-items: center;
             overflow: hidden;
             color: var(--text-main);
-            /* Evita seleção acidental de texto no celular */
             user-select: none; 
             -webkit-user-select: none;
         }
@@ -129,13 +128,8 @@
             width: 100%;
             padding: 4px;
             border: 1px solid #7f9db9;
-            user-select: text; /* Permite digitar */
+            user-select: text;
             -webkit-user-select: text;
-        }
-        .checkbox-group {
-            width: 100%;
-            text-align: left;
-            margin: 6px 0 12px;
         }
 
         /* Perfil */
@@ -148,13 +142,22 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        .avatar {
+        
+        /* Novo estilo dos Avatares baseados em Emojis Aero */
+        .avatar-display {
             width: 50px;
             height: 50px;
-            border: 1px solid #a0a0a0;
+            border: 2px solid #a0a0a0;
+            border-radius: 4px;
             margin-right: 10px;
-            object-fit: cover;
+            background: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.2);
         }
+
         .profile-info { flex-grow: 1; }
         .status-select, .phrase-input {
             width: 100%;
@@ -171,6 +174,35 @@
             gap: 5px;
             margin-top: 5px;
             width: 100%;
+        }
+
+        /* Janela de Seleção de Avatares Clássicos */
+        .avatar-picker-modal {
+            background: white;
+            border: 1px solid var(--window-border);
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+            width: 100%;
+            margin-top: 5px;
+            border-radius: 4px;
+            box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
+        }
+        .avatar-option {
+            font-size: 24px;
+            padding: 5px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .avatar-option:hover {
+            background: var(--hover-bg);
+            border-color: var(--window-border);
         }
 
         /* Lista de amigos */
@@ -191,7 +223,7 @@
         }
         .friends-ul { list-style: none; }
         .friends-ul li {
-            padding: 8px 5px; /* Aumentado para cliques mobile fáceis */
+            padding: 8px 5px;
             display: flex;
             align-items: center;
             cursor: pointer;
@@ -228,11 +260,23 @@
         .chat-info {
             display: flex; padding: 10px; background: white; border-bottom: 1px solid #ccc;
             flex-shrink: 0;
+            align-items: center;
         }
-        .chat-avatar { width: 40px; height: 40px; margin-right: 10px; object-fit: cover; }
+        .chat-avatar-display {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #f9f9f9;
+            font-size: 22px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 10px;
+        }
         .chat-messages {
             flex-grow: 1; background: white; padding: 10px; overflow-y: auto;
-            user-select: text; -webkit-user-select: text; /* Permite ler msgs */
+            user-select: text; -webkit-user-select: text;
         }
         .msg-timestamp { color: #999; font-size: 10px; margin-left: 5px; }
         .msg-autor { font-weight: bold; color: #000080; }
@@ -247,26 +291,6 @@
         }
         .btn-send { margin-left: 5px; height: 50px; }
 
-        /* Nudge shake */
-        @keyframes shake {
-            0% { transform: translate(3px, 2px) rotate(0deg); }
-            10% { transform: translate(-3px, -2px) rotate(-1deg); }
-            20% { transform: translate(-4px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(2px, -2px) rotate(1deg); }
-            50% { transform: translate(-3px, 2px) rotate(-1deg); }
-            60% { transform: translate(-4px, 2px) rotate(0deg); }
-            70% { transform: translate(3px, 2px) rotate(-1deg); }
-            80% { transform: translate(-2px, -2px) rotate(1deg); }
-            90% { transform: translate(3px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-        .tremida {
-            animation: shake 0.1s;
-            animation-iteration-count: 8;
-        }
-
-        /* Chat flutuante */
         #chat-container {
             position: fixed;
             top: 0;
@@ -287,15 +311,6 @@
             display: flex;
             flex-direction: column;
         }
-        @media (max-width: 767px) {
-            #chat-container .chat-window {
-                width: 100%;
-                height: 100%;
-                top: 0 !important;
-                left: 0 !important;
-                border-radius: 0;
-            }
-        }
     </style>
 </head>
 <body>
@@ -303,10 +318,6 @@
     <div id="login-screen" class="window active">
         <div class="window-header">
             <span>MNS Messenger</span>
-            <div class="window-controls">
-                <button class="btn-min">_</button>
-                <button class="btn-close">X</button>
-            </div>
         </div>
         <div class="window-content login-content">
             <img src="logo.png" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/1/11/MSN_Messenger_Logo.png'" alt="MNS Logo" class="logo" />
@@ -322,13 +333,8 @@
                     <label for="password">Senha:</label>
                     <input type="password" id="password" required />
                 </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="remember" />
-                    <label for="remember">Lembrar meu login</label>
-                </div>
-                <div class="actions">
+                <div class="actions" style="margin-top: 15px;">
                     <button type="submit" class="xp-button">Entrar</button>
-                    <button type="button" id="btn-register" class="xp-button">Registrar</button>
                 </div>
             </form>
         </div>
@@ -338,16 +344,12 @@
         <div class="window-header">
             <span>MNS Messenger</span>
             <div class="window-controls">
-                <button class="btn-min">_</button>
                 <button class="btn-close" id="btn-logout">X</button>
             </div>
         </div>
 
         <div class="profile-area">
-            <div id="avatar-container" style="position: relative; cursor: pointer;" title="Clique para alterar a foto">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Ccircle cx='25' cy='25' r='24' fill='%23cccccc'/%3E%3Ccircle cx='25' cy='18' r='8' fill='%23999999'/%3E%3Cpath d='M10 38 Q25 30 40 38' stroke='%23999999' stroke-width='4' fill='none'/%3E%3C/svg%3E" alt="Avatar" class="avatar" id="my-avatar" />
-                <input type="file" id="upload-avatar" accept="image/png, image/jpeg, image/gif" style="display: none;" />
-            </div>
+            <div id="avatar-container" class="avatar-display" style="cursor: pointer;" title="Clique para mudar de personagem">👤</div>
 
             <div class="profile-info">
                 <strong id="my-name">Carregando...</strong>
@@ -360,6 +362,8 @@
                 </select>
                 <input type="text" id="my-phrase" placeholder="Digite uma mensagem pessoal..." class="phrase-input" />
             </div>
+
+            <div id="avatar-picker" class="avatar-picker-modal hidden"></div>
 
             <div class="profile-actions">
                 <button id="btn-add-friend" class="xp-button">➕ Adicionar Amigo</button>
@@ -379,24 +383,22 @@
     <template id="chat-template">
         <div class="window chat-window">
             <div class="window-header">
-                <span class="chat-title">Nome do Contato</span>
+                <span class="chat-title">Conversa</span>
                 <div class="window-controls">
                     <button class="btn-close-chat">X</button>
                 </div>
             </div>
             <div class="chat-info">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='19' fill='%23cccccc'/%3E%3Ccircle cx='20' cy='14' r='6' fill='%23999999'/%3E%3Cpath d='M8 30 Q20 24 32 30' stroke='%23999999' stroke-width='3' fill='none'/%3E%3C/svg%3E" alt="Avatar" class="chat-avatar" />
+                <div class="chat-avatar-display">👤</div>
                 <div>
                     <strong class="chat-contact-name">Contato</strong>
-                    <p class="chat-contact-phrase" style="color:#555;font-style:italic;font-size:11px;">Frase pessoal aqui</p>
+                    <p class="chat-contact-phrase" style="color:#555;font-style:italic;font-size:11px;">Frase pessoal</p>
                 </div>
             </div>
             <div class="chat-messages"></div>
-            <div class="typing-indicator hidden">Contato está digitando...</div>
             <div class="chat-toolbar">
                 <button class="btn-nudge xp-button">🔔 Chamar Atenção</button>
-                <button class="btn-emoji xp-button">😀</button>
-                <button class="btn-clear xp-button">🗑️ Apagar</button> 
+                <button class="btn-clear xp-button">🗑️ Apagar Histórico</button> 
             </div>
             <div class="chat-input-area">
                 <textarea class="chat-input" maxlength="200" placeholder="Digite uma mensagem..."></textarea>
@@ -423,6 +425,22 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Mapeamento de Personagens (Masculino e Feminino) solicitado por você
+        const listaPersonagens = [
+            { id: "rockeiro_m", emoji: "🎸", label: "Rockeiro M" },
+            { id: "rockeiro_f", emoji: "⚡", label: "Rockeira F" },
+            { id: "metaleiro_m", emoji: "💀", label: "Metaleiro M" },
+            { id: "metaleiro_f", emoji: "🖤", label: "Metaleira F" },
+            { id: "emo_m", emoji: "⚰️", label: "Emo M" },
+            { id: "emo_f", emoji: "🌌", label: "Emo F" },
+            { id: "punk_m", emoji: "🧷", label: "Punk M" },
+            { id: "punk_f", emoji: "🔥", label: "Punk F" },
+            { id: "playboy", emoji: "🕶️", label: "Playboy" },
+            { id: "patricinha", emoji: "👑", label: "Patricinha" },
+            { id: "cao", emoji: "🐶", label: "Cão" },
+            { id: "gado", emoji: "🐂", label: "Gado" }
+        ];
+
         const loginScreen = document.getElementById('login-screen');
         const mainScreen = document.getElementById('main-screen');
         const loginForm = document.getElementById('login-form');
@@ -432,13 +450,12 @@
         const friendsList = document.getElementById('friends-list');
         const btnAddFriend = document.getElementById('btn-add-friend');
         const myAvatarImg = document.getElementById('my-avatar');
-        const uploadAvatarInput = document.getElementById('upload-avatar');
         const avatarContainer = document.getElementById('avatar-container');
+        const avatarPicker = document.getElementById('avatar-picker');
 
         let currentUserData = null;
         let lastMessageTime = 0;
         const MESSAGE_COOLDOWN = 3000;
-        const MAX_IMAGE_SIZE = 600000; 
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playMsnSound(type) {
@@ -485,16 +502,13 @@
             }
         });
 
-        document.getElementById('btn-register').addEventListener('click', () => {
-            alert('Registro por convite não implementado nesta POC.\nCrie um usuário diretamente no Firebase Console.');
-        });
-
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 loginScreen.classList.remove('active');
                 loginScreen.classList.add('hidden');
                 mainScreen.classList.remove('hidden');
                 mainScreen.classList.add('active');
+                renderAvatarPicker();
                 await loadUserProfile(user.uid);
                 listenToFriends(user.uid);
             } else {
@@ -506,6 +520,28 @@
             }
         });
 
+        // Monta a janelinha de opções de personagens
+        function renderAvatarPicker() {
+            avatarPicker.innerHTML = '';
+            listaPersonagens.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'avatar-option';
+                item.innerText = p.emoji;
+                item.title = p.label;
+                item.addEventListener('click', async () => {
+                    avatarContainer.innerText = p.emoji;
+                    avatarPicker.classList.add('hidden');
+                    currentUserData.foto = p.emoji;
+                    await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), { foto: p.emoji });
+                });
+                avatarPicker.appendChild(item);
+            });
+        }
+
+        avatarContainer.addEventListener('click', () => {
+            avatarPicker.classList.toggle('hidden');
+        });
+
         async function loadUserProfile(uid) {
             const userRef = doc(db, 'usuarios', uid);
             let userSnap = await getDoc(userRef);
@@ -515,7 +551,7 @@
                     nome: auth.currentUser.email.split('@')[0],
                     email: auth.currentUser.email, 
                     apelido: '',
-                    foto: document.getElementById('my-avatar').src,
+                    foto: '👤', // Emoji padrão
                     frase: 'Jogando...',
                     status: 'online',
                     tema: 'classico',
@@ -540,9 +576,7 @@
             myNameEl.innerText = currentUserData.nome;
             myStatusEl.value = currentUserData.status;
             myPhraseEl.value = currentUserData.frase;
-            if (currentUserData.foto) {
-                myAvatarImg.src = currentUserData.foto;
-            }
+            avatarContainer.innerText = currentUserData.foto || '👤';
 
             myStatusEl.addEventListener('change', (e) => {
                 updateDoc(userRef, { status: e.target.value });
@@ -559,34 +593,6 @@
             });
         }
 
-        avatarContainer.addEventListener('click', () => uploadAvatarInput.click());
-
-        uploadAvatarInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            if (file.size > MAX_IMAGE_SIZE) {
-                alert(`A imagem é muito grande. Escolha uma foto menor.`);
-                return;
-            }
-
-            myAvatarImg.style.opacity = '0.5';
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                try {
-                    const base64String = reader.result;
-                    myAvatarImg.src = base64String;
-                    currentUserData.foto = base64String;
-                    await updateDoc(doc(db, 'usuarios', auth.currentUser.uid), { foto: base64String });
-                } catch (error) {
-                    alert("Erro ao salvar a foto: " + error.message);
-                } finally {
-                    myAvatarImg.style.opacity = '1';
-                }
-            };
-            reader.readAsDataURL(file);
-        });
-
         btnAddFriend.addEventListener('click', async () => {
             const email = prompt('Digite o e-mail do amigo que deseja adicionar:');
             if (!email) return;
@@ -602,31 +608,21 @@
                 });
 
                 if (!targetUid) {
-                    alert('Usuário não encontrado. Verifique o e-mail.');
+                    alert('Usuário não encontrado.');
                     return;
                 }
 
-                if (targetUid === auth.currentUser.uid) {
-                    alert('Você não pode adicionar a si mesmo.');
-                    return;
-                }
+                if (targetUid === auth.currentUser.uid) return;
 
                 const userRef = doc(db, 'usuarios', auth.currentUser.uid);
                 const targetRef = doc(db, 'usuarios', targetUid);
 
-                const userSnap = await getDoc(userRef);
-                const amigos = userSnap.data().amigos || [];
-                if (amigos.includes(targetUid)) {
-                    alert('Este usuário já é seu amigo.');
-                    return;
-                }
-
                 await updateDoc(userRef, { amigos: arrayUnion(targetUid) });
                 await updateDoc(targetRef, { amigos: arrayUnion(auth.currentUser.uid) });
 
-                alert('Amigo adicionado com sucesso!');
+                alert('Amigo adicionado!');
             } catch (error) {
-                alert('Erro ao adicionar amigo: ' + error.message);
+                alert('Erro: ' + error.message);
             }
         });
 
@@ -649,27 +645,25 @@
 
                     li.innerHTML = `
                         <div class="friend-info">
+                            <div style="font-size: 20px; margin-right: 8px;">${friend.foto || '👤'}</div>
                             <div class="status-dot ${statusColor}"></div>
                             <span><strong>${friend.nome}</strong> <span style="color:#777;font-style:italic;">- ${friend.frase || ''}</span></span>
                         </div>
-                        <button class="btn-remove-friend" data-uid="${docSnap.id}" title="Remover amigo">✕</button>
+                        <button class="btn-remove-friend" data-uid="${docSnap.id}">✕</button>
                     `;
 
-                    // Suporta clique normal para abrir chat mobile sem complicação
-                    li.addEventListener('click', () => openChatWindow(docSnap.id, friend));
+                    li.addEventListener('click', (e) => {
+                        if(e.target.className !== 'btn-remove-friend') openChatWindow(docSnap.id, friend);
+                    });
 
                     const btnRemove = li.querySelector('.btn-remove-friend');
                     btnRemove.addEventListener('click', async (e) => {
-                        e.stopPropagation(); // Impede abrir o chat ao remover
-                        if (confirm(`Deseja remover ${friend.nome}?`)) {
-                            try {
-                                const userRef = doc(db, 'usuarios', uid);
-                                const targetRef = doc(db, 'usuarios', docSnap.id);
-                                await updateDoc(userRef, { amigos: arrayRemove(docSnap.id) });
-                                await updateDoc(targetRef, { amigos: arrayRemove(uid) });
-                            } catch (error) {
-                                alert('Erro ao remover amigo: ' + error.message);
-                            }
+                        e.stopPropagation();
+                        if (confirm(`Remover ${friend.nome}?`)) {
+                            const userRef = doc(db, 'usuarios', uid);
+                            const targetRef = doc(db, 'usuarios', docSnap.id);
+                            await updateDoc(userRef, { amigos: arrayRemove(docSnap.id) });
+                            await updateDoc(targetRef, { amigos: arrayRemove(uid) });
                         }
                     });
 
@@ -692,17 +686,11 @@
             chatDiv.style.left = Math.floor(Math.random() * 50 + 50) + 'px';
 
             chatDiv.querySelector('.chat-contact-name').innerText = friendData.nome;
-            chatDiv.querySelector('.chat-title').innerText = `${friendData.nome} - Conversa`;
+            chatDiv.querySelector('.chat-avatar-display').innerText = friendData.foto || '👤';
             chatDiv.querySelector('.chat-contact-phrase').innerText = friendData.frase || '';
-
-            if (friendData.foto) {
-                chatDiv.querySelector('.chat-avatar').src = friendData.foto;
-            }
 
             const messagesArea = chatDiv.querySelector('.chat-messages');
             const inputField = chatDiv.querySelector('.chat-input');
-            
-            // CORREÇÃO: Busca o botão específico desta janela de chat aberta
             const btnSend = chatDiv.querySelector('.btn-send'); 
             const btnNudge = chatDiv.querySelector('.btn-nudge');
             const btnClear = chatDiv.querySelector('.btn-clear');
@@ -726,7 +714,7 @@
                             chatDiv.classList.add('tremida');
                             playMsnSound('nudge');
                             setTimeout(() => chatDiv.classList.remove('tremida'), 800);
-                            messagesArea.innerHTML += `<div class="system-msg">Você acabou de chamar a atenção!</div>`;
+                            messagesArea.innerHTML += `<div class="system-msg">Atenção chamada!</div>`;
                         } else {
                             const isMe = msg.autor === auth.currentUser.uid;
                             const nome = isMe ? currentUserData.nome : friendData.nome;
@@ -736,7 +724,7 @@
                                 <div>
                                     <span class="msg-autor">${nome} diz:</span>
                                     <span class="msg-timestamp">(${time})</span>
-                                    <div style="margin-left:10px;margin-bottom:5px;">${msg.texto}</div>
+                                    <div style="margin-left:10px;margin-bottom:5px;user-select:text;-webkit-user-select:text;">${msg.texto}</div>
                                 </div>
                             `;
                             if (!isMe) playMsnSound('msg');
@@ -747,13 +735,10 @@
             });
 
             const sendMessage = async (text) => {
-                if (!text.trim()) return;
+                if (!text.trim() || text.length > 200) return;
 
                 const now = Date.now();
-                if (now - lastMessageTime < MESSAGE_COOLDOWN && text !== '/nudge') {
-                    alert('Aguarde 3 segundos para enviar outra mensagem.');
-                    return;
-                }
+                if (now - lastMessageTime < MESSAGE_COOLDOWN && text !== '/nudge') return;
                 lastMessageTime = now;
 
                 await addDoc(collection(db, `conversas/${conversationId}/mensagens`), {
@@ -777,17 +762,12 @@
             btnNudge.addEventListener('click', () => sendMessage('/nudge'));
 
             btnClear.addEventListener('click', async () => {
-                if(confirm("Deseja realmente apagar todo o histórico dessa conversa?")) {
-                    try {
-                        const qDel = query(collection(db, `conversas/${conversationId}/mensagens`));
-                        const snap = await getDocs(qDel);
-                        const batch = writeBatch(db);
-                        snap.forEach(d => batch.delete(d.ref));
-                        await batch.commit(); 
-                    } catch (err) {
-                        alert("Erro ao apagar conversa.");
-                        console.error(err);
-                    }
+                if(confirm("Apagar histórico?")) {
+                    const qDel = query(collection(db, `conversas/${conversationId}/mensagens`));
+                    const snap = await getDocs(qDel);
+                    const batch = writeBatch(db);
+                    snap.forEach(d => batch.delete(d.ref));
+                    await batch.commit(); 
                 }
             });
 
