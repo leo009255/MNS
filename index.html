@@ -50,11 +50,13 @@
             cursor: default; flex-shrink: 0; border-bottom: 1px solid var(--window-border);
         }
 
+        .window-controls { display: flex; gap: 4px; }
         .window-controls button {
             background: transparent; border: 1px solid #666; color: #000; border-radius: 3px;
-            width: 24px; height: 24px; cursor: pointer; font-weight: bold;
+            width: 24px; height: 24px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; font-size: 11px;
         }
         .window-controls .btn-close:hover { background: #ff4d4d; color: white; border-color: #ff4d4d; }
+        .window-controls .btn-refresh:hover { background: #e0e0e0; }
 
         .xp-button {
             background: linear-gradient(to bottom, #f2f2f2, #d4d0c8);
@@ -99,6 +101,9 @@
         .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
         .online { background: #00ff00; } .ausente { background: #ffcc00; } .ocupado { background: #ff0000; } .invisivel { background: #888888; } .offline { background: #aaaaaa; }
         .btn-remove-friend { background: transparent; border: none; color: #cc0000; font-weight: bold; cursor: pointer; padding: 5px 12px; font-size: 16px; }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .unread-indicator { margin-left: 8px; font-size: 16px; animation: blink 1s infinite; }
 
         #chat-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; pointer-events: none; z-index: 999; }
         #chat-container .chat-window { pointer-events: all; background: var(--bg-color); border: 1px solid var(--window-border); display: flex; flex-direction: column; width: 100vw; height: 100dvh; position: fixed; top: 0 !important; left: 0 !important; }
@@ -148,7 +153,11 @@
     <div id="main-screen" class="window hidden">
         <div class="window-header">
             <span>MNS Messenger</span>
-            <div class="window-controls"><button class="btn-close" id="btn-logout">X</button></div>
+            <div class="window-controls">
+                <!-- Novo Botão de Atualização Manual -->
+                <button class="btn-refresh" id="btn-refresh" title="Atualizar App">🔄</button>
+                <button class="btn-close" id="btn-logout" title="Sair">X</button>
+            </div>
         </div>
 
         <div class="profile-area">
@@ -194,7 +203,7 @@
             <div class="chat-messages"></div>
             <div class="chat-toolbar">
                 <button class="btn-nudge xp-button">🔔 Chamar Atenção</button>
-                <button class="btn-clear xp-button">🗑️ Limpar</button> 
+                <button class="btn-clear xp-button">🗑️ Limpar Histórico</button> 
             </div>
             <div class="chat-input-area">
                 <textarea class="chat-input" maxlength="200" placeholder="Escreva uma mensagem..."></textarea>
@@ -206,8 +215,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        // Adicionado getCountFromServer para validar o limite de utilizadores
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, writeBatch, arrayUnion, arrayRemove, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // Importação de todas as bibliotecas necessárias, incluindo o 'limit' para as notificações
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, writeBatch, arrayUnion, arrayRemove, getCountFromServer, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCEUUrSWFDIIWrhkFjSRAZZGFb0StiTjik",
@@ -222,7 +231,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Ícones Clássicos do MSN e Tribos atualizadas
         const listaPersonagens = [
             { id: "pato", emoji: "🦆", label: "Patinho" },
             { id: "gato", emoji: "🐱", label: "Gatinho Azul" },
@@ -257,10 +265,11 @@
         let currentUserData = null;
         let lastMessageTime = 0;
         const MESSAGE_COOLDOWN = 3000;
-
-        if ("Notification" in window && Notification.permission === "default") {
-            Notification.requestPermission();
-        }
+        
+        // Controlo da Sessão para as notificações funcionarem só nas mensagens NOVAS
+        const sessionStartTime = Date.now();
+        const activeMessageListeners = {};
+        const lastMsgIdTracker = {};
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playMsnSound(type) {
@@ -286,13 +295,6 @@
             }
         }
 
-        function triggerBrowserNotification(title, body) {
-            if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
-                new Notification(title, { body: body, icon: 'https://upload.wikimedia.org/wikipedia/commons/1/11/MSN_Messenger_Logo.png' });
-            }
-        }
-
-        // Evento de Login Normal
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
@@ -302,29 +304,19 @@
             }
         });
 
-        // Evento de Criação de Conta (Com limite de 100)
         btnRegister.addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
-
-            if (!email || !pass) {
-                alert("Por favor, preencha o e-mail e a palavra-passe para criar uma conta.");
-                return;
-            }
+            if (!email || !pass) { alert("Preencha o e-mail e a palavra-passe."); return; }
 
             try {
-                // Conta quantos utilizadores já existem no banco
-                const coll = collection(db, "usuarios");
-                const snapshot = await getCountFromServer(coll);
-                
+                const snapshot = await getCountFromServer(collection(db, "usuarios"));
                 if (snapshot.data().count >= 100) {
-                    alert("⚠️ O limite de 100 contas para este projeto privado foi atingido. Não é possível criar novos utilizadores.");
+                    alert("⚠️ O limite de 100 contas foi atingido.");
                     return;
                 }
-
-                // Cria o utilizador se houver vaga
                 await createUserWithEmailAndPassword(auth, email, pass);
-                alert("Conta criada com sucesso! A entrar no MNS...");
+                alert("Conta criada com sucesso!");
             } catch (error) {
                 alert("Erro ao criar conta: " + error.message);
             }
@@ -336,6 +328,9 @@
                 signOut(auth);
             }
         });
+
+        // Evento do Botão de Atualizar
+        document.getElementById('btn-refresh').addEventListener('click', () => location.reload());
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -424,10 +419,12 @@
                 const friendsUids = currentUserData?.amigos || [];
 
                 snapshot.forEach((docSnap) => {
-                    if (docSnap.id === uid || !friendsUids.includes(docSnap.id)) return; 
+                    const friendId = docSnap.id;
+                    if (friendId === uid || !friendsUids.includes(friendId)) return; 
 
                     const friend = docSnap.data();
                     const li = document.createElement('li');
+                    li.id = `friend-li-${friendId}`; // Identificador Único
                     const statusColor = friend.status === 'online' ? 'online' : friend.status === 'ausente' ? 'ausente' : friend.status === 'ocupado' ? 'ocupado' : 'invisivel';
 
                     li.innerHTML = `
@@ -435,31 +432,88 @@
                             <div style="font-size: 20px; margin-right: 8px;">${friend.foto || '👤'}</div>
                             <div class="status-dot ${statusColor}"></div>
                             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong>${friend.nome}</strong> <span style="color:#777;font-style:italic;">- ${friend.frase || ''}</span></span>
+                            <span class="unread-indicator hidden" title="Nova Mensagem!">💬</span>
                         </div>
                         <button class="btn-remove-friend">✕</button>
                     `;
 
                     li.addEventListener('click', (e) => {
-                        if(e.target.className !== 'btn-remove-friend') openChatWindow(docSnap.id, friend);
+                        if(e.target.className !== 'btn-remove-friend') openChatWindow(friendId, friend);
                     });
 
                     li.querySelector('.btn-remove-friend').addEventListener('click', async (e) => {
                         e.stopPropagation();
                         if (confirm(`Remover ${friend.nome}?`)) {
-                            await updateDoc(doc(db, 'usuarios', uid), { amigos: arrayRemove(docSnap.id) });
-                            await updateDoc(doc(db, 'usuarios', docSnap.id), { amigos: arrayRemove(uid) });
+                            await updateDoc(doc(db, 'usuarios', uid), { amigos: arrayRemove(friendId) });
+                            await updateDoc(doc(db, 'usuarios', friendId), { amigos: arrayRemove(uid) });
                         }
                     });
 
                     friendsList.appendChild(li);
+
+                    // ==========================================
+                    // SISTEMA ESPIÃO DE NOTIFICAÇÕES (PONTO VERDE)
+                    // ==========================================
+                    if (!activeMessageListeners[friendId]) {
+                        const conversationId = [uid, friendId].sort().join('_');
+                        const qLastMsg = query(collection(db, `conversas/${conversationId}/mensagens`), orderBy("data", "desc"), limit(1));
+                        
+                        activeMessageListeners[friendId] = onSnapshot(qLastMsg, (msgSnap) => {
+                            if (!msgSnap.empty) {
+                                const msgDoc = msgSnap.docs[0];
+                                const msg = msgDoc.data();
+                                
+                                // Verifica se a mensagem é do amigo, é nova nesta sessão e se o chat está fechado
+                                if (msg.autor === friendId && msg.data && msg.data.toMillis() > sessionStartTime) {
+                                    if (msgDoc.id !== lastMsgIdTracker[friendId]) {
+                                        lastMsgIdTracker[friendId] = msgDoc.id;
+                                        
+                                        if (!document.getElementById(`chat_${friendId}`)) {
+                                            const targetLi = document.getElementById(`friend-li-${friendId}`);
+                                            if (targetLi) {
+                                                targetLi.querySelector('.unread-indicator').classList.remove('hidden');
+                                            }
+                                            playMsnSound('msg');
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
                 });
             });
+        }
+
+        // Função isolada para criar a mensagem na tela
+        function renderSingleMessage(msg, messagesArea, friendData, chatDiv, playSound = false) {
+            const isMe = msg.autor === auth.currentUser.uid;
+            const nome = isMe ? currentUserData.nome : friendData.nome;
+
+            if (msg.texto === '/nudge') {
+                chatDiv.classList.add('tremida');
+                if (playSound) playMsnSound('nudge');
+                setTimeout(() => chatDiv.classList.remove('tremida'), 600);
+                messagesArea.innerHTML += `<div class="system-msg">${nome} chamou a atenção!</div>`;
+            } else {
+                const time = msg.data ? new Date(msg.data.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                messagesArea.innerHTML += `
+                    <div>
+                        <span class="msg-autor">${nome} diz:</span> <span class="msg-timestamp">(${time})</span>
+                        <div style="margin-left:10px;margin-bottom:5px;user-select:text;-webkit-user-select:text;">${msg.texto}</div>
+                    </div>
+                `;
+                if (!isMe && playSound) playMsnSound('msg');
+            }
         }
 
         function openChatWindow(friendId, friendData) {
             const container = document.getElementById('chat-container');
             const chatId = `chat_${friendId}`;
             if (document.getElementById(chatId)) return;
+
+            // Remove o balãozinho de notificação quando abre a conversa
+            const targetLi = document.getElementById(`friend-li-${friendId}`);
+            if (targetLi) targetLi.querySelector('.unread-indicator').classList.add('hidden');
 
             const template = document.getElementById('chat-template').content.cloneNode(true);
             const chatDiv = template.querySelector('.chat-window');
@@ -475,35 +529,29 @@
 
             chatDiv.querySelector('.btn-close-chat').addEventListener('click', () => chatDiv.remove());
 
+            // ==========================================
+            // LIMPEZA EM TEMPO REAL CORRIGIDA
+            // ==========================================
+            let isInitialLoad = true;
             onSnapshot(query(collection(db, `conversas/${conversationId}/mensagens`), orderBy("data", "asc")), (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        const msg = change.doc.data();
-                        const isMe = msg.autor === auth.currentUser.uid;
-                        const nome = isMe ? currentUserData.nome : friendData.nome;
+                
+                // Se detetar que as mensagens foram apagadas ou que a coleção está vazia
+                let hasRemovals = false;
+                snapshot.docChanges().forEach(change => { if (change.type === "removed") hasRemovals = true; });
 
-                        if (msg.texto === '/nudge') {
-                            chatDiv.classList.add('tremida');
-                            playMsnSound('nudge');
-                            setTimeout(() => chatDiv.classList.remove('tremida'), 600);
-                            messagesArea.innerHTML += `<div class="system-msg">${nome} chamou a atenção!</div>`;
-                            if (!isMe) triggerBrowserNotification("🔔 Atenção!", `${friendData.nome} chamou a sua atenção!`);
-                        } else {
-                            const time = msg.data ? new Date(msg.data.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                            messagesArea.innerHTML += `
-                                <div>
-                                    <span class="msg-autor">${nome} diz:</span> <span class="msg-timestamp">(${time})</span>
-                                    <div style="margin-left:10px;margin-bottom:5px;user-select:text;-webkit-user-select:text;">${msg.texto}</div>
-                                </div>
-                            `;
-                            if (!isMe) {
-                                playMsnSound('msg');
-                                triggerBrowserNotification(`💬 Nova mensagem de ${friendData.nome}`, msg.texto);
-                            }
+                if (snapshot.empty || hasRemovals) {
+                    messagesArea.innerHTML = ''; // Limpa a tela na hora!
+                    snapshot.forEach((docSnap) => renderSingleMessage(docSnap.data(), messagesArea, friendData, chatDiv, false));
+                } else {
+                    // Renderiza apenas as novas
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added") {
+                            renderSingleMessage(change.doc.data(), messagesArea, friendData, chatDiv, !isInitialLoad);
                         }
-                        messagesArea.scrollTop = messagesArea.scrollHeight;
-                    }
-                });
+                    });
+                }
+                isInitialLoad = false;
+                messagesArea.scrollTop = messagesArea.scrollHeight;
             });
 
             const sendMessage = async (text) => {
@@ -523,12 +571,13 @@
             chatDiv.querySelector('.btn-send').addEventListener('click', () => sendMessage(inputField.value));
             inputField.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(inputField.value); } });
             chatDiv.querySelector('.btn-nudge').addEventListener('click', () => sendMessage('/nudge'));
+            
             chatDiv.querySelector('.btn-clear').addEventListener('click', async () => {
-                if (confirm("Apagar histórico?")) {
+                if (confirm("Apagar histórico de conversa?")) {
                     const snap = await getDocs(query(collection(db, `conversas/${conversationId}/mensagens`)));
                     const batch = writeBatch(db);
                     snap.forEach(d => batch.delete(d.ref));
-                    await batch.commit();
+                    await batch.commit(); // O onSnapshot acima vai esvaziar a tela sozinho agora!
                 }
             });
 
